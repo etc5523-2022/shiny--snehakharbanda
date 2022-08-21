@@ -3,6 +3,7 @@ library(tidyverse)
 library(lubridate)
 library(tidyr)
 library(shinythemes)
+library(glue)
 
 bike <- read_csv('week10_biketown.csv')
 bike[c('code', 'bike_name')] <- str_split_fixed(bike$BikeName, ' ', 2)
@@ -69,12 +70,13 @@ ui <- fluidPage(theme = shinytheme("darkly"),
     fluidRow(
       sidebarLayout(
         sidebarPanel(
-        radioButtons("time", "Guess the time", choices = unique(bike$Time_of_day)),
+        selectizeInput("time", "Guess the time",
+                     choices = unique(bike$Time_of_day)),
         actionButton("submit", "Submit")
         ),
         mainPanel(
           textOutput("answer"),
-          uiOutput("Morning")
+          uiOutput("Morning"),
         )
 
       )
@@ -109,7 +111,7 @@ server <- function(input, output, session) {
       lat
       long <- unique(bike$StartLongitude[bike$StartHub== input$find_latitude])
       long
-      paste("Latitude is", lat, "and longitude is", long)
+      glue("Latitude is ", lat, " and longitude is ", long)
 
     })
 
@@ -121,22 +123,35 @@ server <- function(input, output, session) {
 
     })
 
+
+    time_msg <- reactive({
+      case_when(input$time == "Morning" ~ "This is not the correct answer. ",
+      input$time == "Afternoon" ~ "This is the correct answer. ",
+      input$time == "Evening" ~ "Unfortunately, you are wrong. ",
+      input$time == "Night" ~ "Uhoh!. "
+      )
+    })
+
+
     output$answer <- renderText({
       bike2 <- bike %>% select(Time_of_day) %>%
         count(Time_of_day, sort = TRUE) %>%
         mutate(percentage = (n/sum(n))*100) %>%
         mutate(percentage = round(percentage, digits =2))
+
+
           if(input$submit) {
-            paste("The highest is", bike2$Time_of_day[1], "!", bike2$percentage[1], "% people drive in the afternoon.")
+            glue(time_msg(), bike2$percentage[1], "% people ride in the afternoon.")
           }
     })
 
     output$Morning <- renderUI({
       if(input$submit) {
       tags$img(src = "https://www.pngkey.com/png/detail/54-543795_eyes-sun-cartoon-half-free-sad-rays-grumpy.png",
-               height="50%", width="50%", align="right")
+               height="50%", width="50%", align="centre")
       }
-    })
+    }) %>%
+      bindEvent(input$submit)
 
 
     output$about <- renderUI({
