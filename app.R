@@ -2,6 +2,7 @@ library(shiny)
 library(tidyverse)
 library(lubridate)
 library(tidyr)
+library(shinythemes)
 
 bike <- read_csv('week10_biketown.csv')
 bike[c('code', 'bike_name')] <- str_split_fixed(bike$BikeName, ' ', 2)
@@ -21,24 +22,14 @@ bike <- bike %>%
   mutate(StartLatitude = round(StartLatitude, digits = 2)) %>%
   mutate(StartLongitude = round(StartLongitude, digits = 2))
 
-ui <- fluidPage(
+bike$StartTime <- hms(bike$StartTime)
+breaks <- hour(hm("00:00", "6:00", "12:00", "18:00", "23:59"))
+labels <- c("Night", "Morning", "Afternoon", "Evening")
+bike$Time_of_day <- cut(x=hour(bike$StartTime), breaks = breaks, labels = labels, include.lowest=TRUE)
+
+ui <- fluidPage(theme = shinytheme("darkly"),
 
     titlePanel("Biketown Bikeshare"),
-
-    h3("1. How long are different bikes driven for?"),
-    fluidRow(
-      sidebarLayout(
-        sidebarPanel(multiple = TRUE,
-                     helpText("Select a bike"),
-                     selectInput("bikeName", h3("Bike Name"),
-                                 choices = unique(bike$bikeName))
-                     ),
-        mainPanel(
-          plotOutput("bikeDur")
-        )
-
-      )
-    ),
 
     h3("2. Compare bike"),
     fluidRow(
@@ -74,23 +65,21 @@ ui <- fluidPage(
       )
     ),
 
-    h3("3.Time of Day"),
+    h3("What time of day do most people ride?"),
     fluidRow(
       sidebarLayout(
-        sidebarPanel(h3("Find your latitude and longitude"),
-                     selectizeInput("find_latitude", "Choose your Area",
-                                    choices = unique(bike$StartHub)),
-                     numericInput("lat", "Enter your latitude", value = 45.52),
-                     numericInput("long", "Enter your longitude", value = -122.65)
-
+        sidebarPanel(
+        radioButtons("time", "Guess the time", choices = unique(bike$Time_of_day)),
+        actionButton("submit", "Submit")
         ),
-
         mainPanel(
-          textOutput("latitude"),
-          tableOutput("paymentTable")
+          textOutput("answer"),
+          uiOutput("Morning")
         )
+
       )
     ),
+
 
 
     fluidRow(
@@ -107,12 +96,6 @@ server <- function(input, output, session) {
   observe({
     updateSelectInput(session, "bikes_compare2", choices = setdiff(unique(bike$bikeName), input$bikes_compare1))
   })
-
-  output$bikeDur <- renderPlot({
-    dplyr::filter(bike, bikeName == input$bikeName) %>%
-      ggplot(aes(MultipleRental)) +
-      geom_bar()
-    })
 
     output$compare_bike <- renderPlot({
       bike %>% group_by(bikeName) %>%
@@ -133,9 +116,26 @@ server <- function(input, output, session) {
     output$paymentTable <- renderTable({
       bike1 <- bike %>%
         filter(StartLatitude == input$lat & StartLongitude == input$long) %>%
-        count(PaymentPlan) %>% drop_na()
-        bike1
+        count(PaymentPlan, sort = TRUE) %>% drop_na()
+      bike1
 
+    })
+
+    output$answer <- renderText({
+      bike2 <- bike %>% select(Time_of_day) %>%
+        count(Time_of_day, sort = TRUE) %>%
+        mutate(percentage = (n/sum(n))*100) %>%
+        mutate(percentage = round(percentage, digits =2))
+          if(input$submit) {
+            paste("The highest is", bike2$Time_of_day[1], "!", bike2$percentage[1], "% people drive in the afternoon.")
+          }
+    })
+
+    output$Morning <- renderUI({
+      if(input$submit) {
+      tags$img(src = "https://www.pngkey.com/png/detail/54-543795_eyes-sun-cartoon-half-free-sad-rays-grumpy.png",
+               height="50%", width="50%", align="right")
+      }
     })
 
 
