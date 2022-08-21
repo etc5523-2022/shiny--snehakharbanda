@@ -1,70 +1,93 @@
 library(shiny)
 library(tidyverse)
+library(lubridate)
+library(tidyr)
+
+bike <- read_csv('week10_biketown.csv')
+bike[c('code', 'bike_name')] <- str_split_fixed(bike$BikeName, ' ', 2)
+bike[c('BikeName2', 'info')] <- str_split_fixed(bike$bike_name, '-', 2)
+bike[c('BikeName3', 'info')] <- str_split_fixed(bike$BikeName2, '\\(', 2)
+bike$bikeName <- trimws(bike$BikeName3, which = c("both"))
+bike <- bike %>% select(-BikeName, -bike_name, -BikeName2, -BikeName3)
+
+bike <- bike %>%
+  mutate(Duration = as.numeric(hms(bike$Duration))) %>%
+  mutate(Duration = Duration/3600) %>%
+  mutate(speed = Distance_Miles/Duration) %>%
+  mutate(speed = round(speed, digits = 3))
+
+bike <- bike %>%
+  drop_na(StartLatitude, StartLongitude, StartHub) %>%
+  mutate(StartLatitude = round(StartLatitude, digits = 2)) %>%
+  mutate(StartLongitude = round(StartLongitude, digits = 2))
 
 ui <- fluidPage(
 
-    titlePanel("Old Faithful Geyser Data"),
+    titlePanel("Biketown Bikeshare"),
 
-    h3("1. What number of bins do you stop seeing bimodality in the waiting time?"),
+    h3("1. How long are different bikes driven for?"),
     fluidRow(
       sidebarLayout(
-          sidebarPanel(
-              sliderInput("bins",
-                          "Number of bins:",
-                          min = 1,
-                          max = 50,
-                          value = 30)
-          ),
+        sidebarPanel(multiple = TRUE,
+                     helpText("Select a bike"),
+                     selectInput("bikeName", h3("Bike Name"),
+                                 choices = unique(bike$bikeName))
+                     ),
+        mainPanel(
+          plotOutput("bikeDur")
+        )
 
-          mainPanel(
-             plotOutput("distPlot")
-          )
       )
     ),
 
-    h3("2. How do the different geoms change the view of the data?"),
+    h3("2. Compare bike"),
     fluidRow(
       sidebarLayout(
-        sidebarPanel(
-          radioButtons("geom",
-                      "Geom choice:",
-                      choices = c("geom_point",
-                                  "geom_density_2d",
-                                  "geom_density_2d_filled",
-                                  "geom_bin_2d",
-                                  "geom_hex"))
-        ),
+        sidebarPanel(h1("Bike Comparison"),
+                     selectizeInput("bikes_compare1", "Select bike 1",
+                                    choices = unique(bike$bikeName)),
+                     selectizeInput("bikes_compare2", "Select bike 2",
+                                    choices = unique(bike$bikeName))
 
+        ),
         mainPanel(
-          plotOutput("plot")
+          plotOutput("compare_bike")
         )
       )
     ),
 
-    h3("3. Is a mixture of two normal distribution good fit on eruption time?"),
+    h3("3.Find Area's attributes"),
     fluidRow(
       sidebarLayout(
-        sidebarPanel(
-          sliderInput("bins2",
-                      "Adjust the number of bins (if needed):",
-                      min = 1,
-                      max = 50,
-                      value = 30),
-          "Enter your guess for the:",
-          numericInput("p", "Mixing probability:",
-                       value = 0.35, min = 0, max = 1),
-          numericInput("mean1", "Mean of the first group:",
-                       value = 2.02),
-          numericInput("mean2", "Mean of the second group:",
-                       value = 4.27),
-          numericInput("sd1", "Standard deviation of the first group:",
-                       value = 0.24, min = 0),
-          numericInput("sd2", "Standard deviation of the second group:",
-                       value = 0.44, min = 0)
+        sidebarPanel(h3("Find your latitude and longitude"),
+                     selectizeInput("find_latitude", "Choose your Area",
+                                    choices = unique(bike$StartHub)),
+                     numericInput("lat", "Enter your latitude", value = 45.52),
+                     numericInput("long", "Enter your longitude", value = -122.65)
+
         ),
 
         mainPanel(
-          plotOutput("mixDistFit")
+          textOutput("latitude"),
+          tableOutput("paymentTable")
+        )
+      )
+    ),
+
+    h3("3.Time of Day"),
+    fluidRow(
+      sidebarLayout(
+        sidebarPanel(h3("Find your latitude and longitude"),
+                     selectizeInput("find_latitude", "Choose your Area",
+                                    choices = unique(bike$StartHub)),
+                     numericInput("lat", "Enter your latitude", value = 45.52),
+                     numericInput("long", "Enter your longitude", value = -122.65)
+
+        ),
+
+        mainPanel(
+          textOutput("latitude"),
+          tableOutput("paymentTable")
         )
       )
     ),
@@ -79,33 +102,42 @@ ui <- fluidPage(
     includeCSS("styles.css")
 )
 
-server <- function(input, output) {
+server <- function(input, output, session) {
 
-    output$distPlot <- renderPlot({
-        ggplot(faithful, aes(waiting)) +
-         geom_histogram(bins = input$bins, color = "white") +
-         theme_bw(base_size = 14) +
-         labs(x = "Waiting time", y = "Count")
+  observe({
+    updateSelectInput(session, "bikes_compare2", choices = setdiff(unique(bike$bikeName), input$bikes_compare1))
+  })
+
+  output$bikeDur <- renderPlot({
+    dplyr::filter(bike, bikeName == input$bikeName) %>%
+      ggplot(aes(MultipleRental)) +
+      geom_bar()
     })
 
-    output$plot <- renderPlot({
-      ggplot(faithful, aes(waiting, eruptions)) +
-        get(input$geom)() +
-        theme_bw(base_size = 14) +
-        labs(x = "Waiting time", y = "Eruption time")
+    output$compare_bike <- renderPlot({
+      bike %>% group_by(bikeName) %>%
+        summarise(avg_speed = mean(speed, na.rm = TRUE)) %>%
+        filter(bikeName == input$bikes_compare1 | bikeName == input$bikes_compare2) %>%
+        ggplot(aes(bikeName, avg_speed, fill = bikeName)) + geom_col()
     })
 
-    output$mixDistFit <- renderPlot({
-      df <- data.frame(x = seq(min(faithful$eruptions), max(faithful$eruptions), length = 1000)) %>%
-        mutate(density = input$p * dnorm(x, input$mean1, input$sd1) +
-                         (1 - input$p) * dnorm(x, input$mean2, input$sd2))
+    output$latitude <- renderText({
+      lat <- unique(bike$StartLatitude[bike$StartHub== input$find_latitude])
+      lat
+      long <- unique(bike$StartLongitude[bike$StartHub== input$find_latitude])
+      long
+      paste("Latitude is", lat, "and longitude is", long)
 
-      ggplot(faithful, aes(eruptions)) +
-        geom_histogram(aes(y = stat(density)), bins = input$bins2, color = "white") +
-        geom_line(data = df, aes(x = x, y = density), color = "red", size = 2) +
-        theme_bw(base_size = 14) +
-        labs(x = "Eruption time", y = "Density")
     })
+
+    output$paymentTable <- renderTable({
+      bike1 <- bike %>%
+        filter(StartLatitude == input$lat & StartLongitude == input$long) %>%
+        count(PaymentPlan) %>% drop_na()
+        bike1
+
+    })
+
 
     output$about <- renderUI({
       knitr::knit("about.Rmd", quiet = TRUE) %>%
