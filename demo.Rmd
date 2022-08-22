@@ -1,0 +1,170 @@
+---
+title: "Untitled"
+author: "Sneha"
+date: "2022-08-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+bike %>% ggplot(aes(bikeName)) + geom_bar() + theme(axis.text.x = element_text(angle = 90))
+
+bike1 <- bike %>% filter(bikeName == "AIR TRAINER") 
+ggplot(bike1, aes(MultipleRental)) + geom_bar()
+
+```
+```{r}
+bike2 <- bike %>% group_by(bikeName) %>% summarise(sum = sum(Distance_Miles, drop_na = TRUE))
+bike2 <- bike2 %>% filter(bikeName == "AIR MAX" | bikeName == "AIR SAFARI")
+bike2 %>% ggplot(aes(bikeName, sum)) + geom_col() + theme(axis.text.x = element_text(angle = 45))
+```
+
+
+```{r}
+unique(bike$StartHub)
+class(bike$Duration)
+strptime(bike$Duration, "%H:%M:%S")
+```
+
+```{r}
+library(tidyr)
+bike3 <- bike %>% unite("DateTime", StartDate,Duration, sep = " ", remove = FALSE)
+bike3 <- bike3 %>% mutate(duration = strptime(bike3$DateTime, "%m/%d/%Y %H:%M:%S"))
+
+
+
+bike3 <- bike3 %>% group_by(StartDate) %>% mutate(sum = sum(duration))
+
+
+```
+
+```{r}
+library(chron)
+bike5 <- bike %>% chron(bike$Duration=time)
+```
+
+```{r}
+bike6 <- bike %>%
+  group_by(StartDate)
+  
+bike6 <- bike %>%
+  mutate(Duration = gsub(":", ".", bike6$Duration)) %>%
+  mutate(Duration = sub("00.", "", bike6$Duration))
+
+bike6$Duration = substr(bike6$Duration,1,5)
+
+unique(bike$TripType)
+
+substr("abcdef", 2, 4)
+
+as.numeric(hms(bike6$Duration))
+```
+
+```{r}
+bike7 <- bike %>% mutate(Duration = as.numeric(hms(bike$Duration))) %>%
+  mutate(Duration = Duration/3600) %>%
+  mutate(speed = Distance_Miles/Duration) %>%
+  mutate(speed = round(speed, digits = 3))
+
+```
+```{r}
+bike7 <- bike %>%
+  mutate(Duration = as.numeric(hms(bike$Duration))) %>%
+  mutate(Duration = Duration/3600) %>%
+  mutate(speed = Distance_Miles/Duration) %>%
+  mutate(speed = round(speed, digits = 3))
+
+bike7 <- bike %>%
+  group_by(bikeName) %>%
+  mutate(avg_speed = mean(speed, na.rm = TRUE))
+```
+
+
+```{r}
+library("gplots")
+bike8 <- bike %>% select(bikeName, speed, Distance_Miles, Duration)
+heatmap.2(as.matrix(bike9[, -1]), scale = "none", col = bluered(100),trace = "none", density.info = "none")
+
+bike9 <- bike %>% count(PaymentPlan) %>% drop_na()
+
+```
+
+```{r}
+bike10 <- bike %>%
+  mutate(Start_loc = gsub(".*at ", "", bike$StartHub))
+bike10 <- bike10 %>%
+  mutate(Start_loc = gsub(" -* ", "", bike10$Start_loc))
+
+unique(bike$StartHub)
+bike11 <- bike %>% select(StartLatitude, StartHub)
+bike11 %>% bike11$StartLatitude[bike11$StartHub]
+
+unique(bike12$StartLatitude)
+lat <- unique(bike12$StartLatitude[bike12$StartHub== "SE 30th at Division"])
+long <- unique(bike$StartLongitude[bike$StartHub== unique(bike$StartHub)[1]])
+lat
+```
+
+```{r}
+bike12 <- bike %>%
+  drop_na(StartLatitude, StartLongitude, StartHub) %>%
+  mutate(StartLatitude = round(StartLatitude, digits = 2)) %>%
+  mutate(StartLongitude = round(StartLongitude, digits = 2))
+
+unique(bike12$StartLatitude)
+unique(bike12$StartLongitude)
+
+bike13 <- bike12 %>% filter(StartLatitude == 45.52 & StartLongitude == -122.65)
+
+bike13 %>% count(PaymentPlan) %>% drop_na()
+lat[3]
+
+bike1 <- bike %>%
+  mutate(StartLatitude = round(StartLatitude, digits = 2)) %>%
+  mutate(StartLongitude = round(StartLongitude, digits = 2)) %>%
+  filter(StartLatitude == `lat[3]` & StartLongitude == `long[3]`)
+bike2 <- bike1 %>% count(PaymentPlan) %>% drop_na()
+bike2
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+bike14 <- bike
+bike14$StartTime <- hms(bike14$StartTime)
+breaks <- hour(hm("00:00", "6:00", "12:00", "18:00", "23:59"))
+labels <- c("Night", "Morning", "Afternoon", "Evening")
+bike14$Time_of_day <- cut(x=hour(bike14$StartTime), breaks = breaks, labels = labels, include.lowest=TRUE)
+
+bike14 <- bike14 %>% select(Time_of_day) %>% count(Time_of_day, sort = TRUE) %>% mutate(percentage = (n/sum(n))*100)
+```
+```{r}
+bike15 <- bike %>%
+  filter(StartLatitude == 45.52 & StartLongitude == -122.65) %>%
+  summarise(average_speed_milesPerHour = mean(speed, na.rm = TRUE),
+                             average_duration_seconds = mean((Duration*3600), na.rm = TRUE))
+```
+
+```{r}
+bike16 <- bike %>%
+  filter(StartLatitude == 45.52 & StartLongitude == -122.65) %>%
+  drop_na(StartDate) %>%
+  group_by(StartDate)
+
+ggplot(bike16) +
+  geom_boxplot(aes(x = StartDate, y = Duration), outlier.shape = NA) +
+  scale_y_continuous(limits = quantile(bike16$Duration, c(0.1, 0.9)))
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

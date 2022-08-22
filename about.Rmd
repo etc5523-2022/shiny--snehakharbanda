@@ -1,26 +1,22 @@
 
 #### Data
 
-This data shows the waiting time between eruptions
-and the duration of the eruption for the Old Faithful
-geyser in Yellowstone National Park, Wyoming, USA.
-The data source is from Azzalini & Bowman (1990) 
-*"A look at some data on the Old Faithful geyser." Applied Statistics*, 39, 357–365.
+This data shows various attributes of rental bikes like the duration, distance, location, date and time driven etc. There are more than 408880 observations in the data. The source of the data is [biketown-tripdata-public](https://s3.amazonaws.com/biketown-tripdata-public/index.html)
 
 
 #### Purpose
 
 The purpose of the app is to:
 
-1. show how the number of bins in a histogram reveals/hides the bimodality in the data,
-2. show how the different plot choices make certain features of data more striking, and 
-3. interactively estimate the best parameters for the mixture of two normal distributions to the data. 
+1. Compare the average speed of different bikes in a plot. Speed is calculated by dividing distance driven by duration driven. 
+2. Using latitude and longitude on one's area, find the common characteristics like payment plan, average duration and average speed driven when users start in that area.
+3. Intrigue the users about make them guess which time of the day is most common for riders and also giving information and the right answer. 
 
-The data showed obvious signs of bimodality (both in the marginal and joint distribution). The app used interactive components to see how the choices in plot elements (e.g. number of bins and plot types) effect the visibility of these features. The last part used an interactive approach for a user to decide the model parameters that fit the data. 
+The first two aspects of the app are to give users basic insight that they can use while renting the bikes. When users are asked to guess about the time without showing the actual answer is interest them more which is what the third part of the app aims to do. 
 
 #### Creator
 
-Emi Tanaka (emi.tanaka@monash.edu)
+Sneha Kharbanda (sneha.kharbanda@student.monash.edu)
 
 <details>
 <summary>Session information</summary>
