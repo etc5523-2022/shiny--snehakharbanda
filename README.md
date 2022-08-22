@@ -8,4 +8,4 @@ This is a **Bikeshare analysis** app for the ETC5523 Assessment 1.
 
 The goal of the app is in part explanatory (identify factors that affect what we see in a plot) and in part descriptive (describing the marginal or joint distribution of data).
 
-The link to the app can be found at [https://ebsmonash.shinyapps.io/etc5523-assessment1-sample/](https://ebsmonash.shinyapps.io/etc5523-assessment1-sample/)
+The link to the app can be found at [https://u196ro-sneha-kharbanda.shinyapps.io/biketown_sneha/](https://u196ro-sneha-kharbanda.shinyapps.io/biketown_sneha/)
