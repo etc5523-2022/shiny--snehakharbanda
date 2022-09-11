@@ -119,13 +119,12 @@ server <- function(input, output, session) {
   })
 
     output$compare_bike <- renderPlot({
-      bike %>% group_by(bikeName) %>%
-        summarise(avg_speed = mean(speed, na.rm = TRUE)) %>%
+      bike %>%
         filter(bikeName == input$bikes_compare1 | bikeName == input$bikes_compare2) %>%
-        ggplot(aes(bikeName, avg_speed, fill = bikeName)) +
-        geom_col(show.legend = FALSE) +
-        labs(title = "Average speed in miles per hour") +
-             ylab("Avg_speed in miles/hour") +
+        ggplot(aes(bikeName, speed, fill = bikeName)) +
+        geom_boxplot(show.legend = FALSE) +
+        labs(title = "Speed in miles per hour") +
+             ylab("Speed in miles/hour") +
              xlab("Bike Name") +
         theme_minimal() +
         theme(axis.text.x = element_text(color = "blue")) +
